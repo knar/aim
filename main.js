@@ -1,20 +1,20 @@
 let canvas, renderer, scene, camera, cube, hasFocus, aim;
 
 function havePointerLock() {
-    return ('pointerLockElement' in document ||
-        'mozPointerLockElement' in document ||
-        'webkitPointerLockElement' in document);
+	return 'pointerLockElement' in document ||
+		'mozPointerLockElement' in document ||
+		'webkitPointerLockElement' in document;
 }
 
 function activatePointerLock(canvas) {
-    canvas.requestPointerLock = canvas.requestPointerLock ||
-        canvas.mozRequestPointerLock ||
-        canvas.webkitRequestPointerLock;
+	canvas.requestPointerLock = canvas.requestPointerLock ||
+		canvas.mozRequestPointerLock ||
+		canvas.webkitRequestPointerLock;
 	canvas.requestPointerLock();
 }
 
 function isPointerLocked(canvas) {
-    return document.pointerLockElement === canvas;
+	return document.pointerLockElement === canvas;
 }
 
 function init() {
