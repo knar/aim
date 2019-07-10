@@ -1,4 +1,4 @@
-let canvas, renderer, scene, camera, cube, hasFocus, aim;
+let canvas, renderer, scene, camera, cube, hasFocus, aim, hudCanvas, hudctx;
 
 function havePointerLock() {
 	return 'pointerLockElement' in document ||
@@ -18,13 +18,13 @@ function isPointerLocked(canvas) {
 }
 
 function init() {
-	canvas = document.getElementById("canvas");
-
+	canvas = document.getElementById("threeCanvas");
+	
 	// camera
 	const fov = 90;
 	const aspect = canvas.width / canvas.height;
 	const near = 0.1;
-	const far = 5;
+	const far = 25;
 
 	camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 	camera.position.z = 3;
@@ -46,8 +46,14 @@ function init() {
 
 	// the scene, with cube and light
 	scene = new THREE.Scene();
+	scene.background = new THREE.Color(0x9dd0fc);
 	scene.add(cube);
 	scene.add(light);
+
+	hudCanvas = document.getElementById("hudCanvas");
+	hudctx = hudCanvas.getContext("2d");
+
+	drawHud();
 
 	// resize bruh
 	window.addEventListener('resize', resize);
@@ -78,6 +84,23 @@ function render() {
 	renderer.render(scene, camera);
 }
 
+function drawHud() {
+	const x = hudCanvas.width / 2 + 0.5;
+	const y = hudCanvas.height / 2 + 0.5;
+	const size = 10;
+	const drawOutline = true;
+	hudctx.strokeStyle = '#0000ff';
+	hudctx.lineWidth = 4;
+	
+	hudctx.beginPath();
+	hudctx.moveTo(x - size, y);
+	hudctx.lineTo(x + size, y);
+	hudctx.moveTo(x, y - size);
+	hudctx.lineTo(x, y + size);
+	hudctx.stroke();
+
+}
+
 function resize() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
@@ -86,6 +109,12 @@ function resize() {
 	camera.updateProjectionMatrix();
 
 	renderer.setSize(canvas.width, canvas.height);
+	renderer.render(scene, camera);
+
+	hudCanvas.width = window.innerWidth;
+	hudCanvas.height = window.innerHeight;
+
+	drawHud();
 }
 
 function mouseMove(event) {
