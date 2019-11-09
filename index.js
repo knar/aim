@@ -37,16 +37,16 @@ function aim() {
 	const two_pi = Math.PI * 2
 	const wall_w = 60
 	const wall_h = 60
-	const wall_d = 100
+	const wall_d = 150
 	const target_radius = 3
-	const num_targets = 10
+	const num_targets = 3
 	const t_box = {
 		minX: -wall_w + target_radius,
 		maxX: wall_w - target_radius,
 		minY: target_radius,
 		maxY: wall_h - target_radius,
-		minZ: -wall_d + 1,
-		maxZ: -wall_d + 30,
+		minZ: -wall_d + 20,
+		maxZ: -wall_d + 100,
 	}
 	const box = {
 		minX: -wall_w,
@@ -55,9 +55,9 @@ function aim() {
 		maxZ: 10,
 	}
 	const move_speed = 0.05
-	const mouse_sens = 0.002
+	const mouse_sens = 0.0012
 
-	const game_time = 15 * 1000
+	const game_time = 20 * 1000
 	let start_time
 	let time_left
 	let score
@@ -83,23 +83,35 @@ function aim() {
 		camera.quaternion.setFromEuler(new THREE.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 
 		// renderer
-		renderer = new THREE.WebGLRenderer({ canvas: three_canvas })
+		renderer = new THREE.WebGLRenderer({ canvas: three_canvas, antialias: true })
 		renderer.setSize(three_canvas.width, three_canvas.height)
+
+		renderer.gammaOutput = true;
+		renderer.gammaFactor = 2;
+
+		renderer.shadowMap.enabled = true
 
 		// scene setup
 		scene = new THREE.Scene()
-		scene.background = new THREE.Color(0x000000)
+		scene.background = new THREE.Color(0x77aaff)
 
 		scene.add(gen_floor_mesh())
 		scene.add(gen_wall_mesh())
-		
-		const light = new THREE.PointLight(0xffffff, 1.0)
-		light.position.set(-wall_w / 2, 2.5 * wall_h, -wall_d / 2)
+	
+		const ambient = new THREE.AmbientLight(0x444444, 1.6);
+		scene.add(ambient);
+
+		const light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 16, 0.3, 10)
+		light.target.position.set(0, 0, -50)
+		light.position.set(-100, 500, 100)
+		light.castShadow = true
+		light.shadow.camera.near = 1
+		light.shadow.camera.far = 800 
+		light.shadow.mapSize.width = 4096
+		light.shadow.mapSize.height = 4096
 		scene.add(light)
-
-		const ambience = new THREE.AmbientLight(0xffffff, 0.9)
-		scene.add(ambience)
-
+		scene.add(light.target)
+	
 		// hud stuff
 		hud_canvas = document.getElementById("hud_canvas")
 		hud_context = hud_canvas.getContext("2d")
@@ -115,9 +127,11 @@ function aim() {
 		document.addEventListener('mousemove', mouse_move)
 
 		three_canvas.addEventListener('click', (event) => {
-			if (!has_focus && have_pointer_lock())
+			if (!has_focus && have_pointer_lock()) {
+				reset_game_vars()
 				activate_pointer_lock(three_canvas)
-			
+			}
+				
 			if (has_focus && event.button == 0)
 				shoot()
 		})
@@ -194,7 +208,7 @@ function aim() {
 		}
 
 		// only check collision if aiming in the right area
-		if (-d.z * (wall_d * 1.4) > wall_d) {
+		//if (-d.z * (wall_d * 1.4) > wall_d) {
 			for (let i = 0; i < targets.length; i++) {
 				const t = targets[i]
 				const q = dist_3d({
@@ -225,7 +239,7 @@ function aim() {
 					break
 				}
 			}
-		}
+		//}
 	}
 
 	function spawnTarget() {
@@ -264,14 +278,21 @@ function aim() {
 	}
 
 	function gen_target_mesh({ x, y, z }) {
-		let geo = new THREE.CircleGeometry(target_radius, 16)
-		let mat = new THREE.MeshStandardMaterial({ color: 0x00ffff })
+		let geo = new THREE.CylinderGeometry(target_radius, target_radius, 1, 64)
+		let mat = new THREE.MeshStandardMaterial({ color: 0x22ff44, metalness: 0.5 })
+		let geo_dot = new THREE.CylinderGeometry(target_radius * 0.3, target_radius * 0.6, 1.5, 32)
+			.translate(0, 0.26, 0)
+		let mat_dot = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
 
-		let m = new THREE.Mesh(geo, mat)
+		let m = new THREE.Group()
+			.add(new THREE.Mesh(geo, mat))
+			.add(new THREE.Mesh(geo_dot, mat_dot))
+			.rotateX(Math.PI / 2)
 		m.position.x = x
 		m.position.y = y
 		m.position.z = z
-
+		m.children.forEach(c => c.castShadow = true)
+		
 		return m
 	}
 
@@ -305,9 +326,11 @@ function aim() {
 
 		geo.computeFaceNormals()
 
-		const mat = new THREE.MeshStandardMaterial({ color: 0xff8833 })
+		const mat = new THREE.MeshPhongMaterial({ color: 0xff8833 })
 
-		return new THREE.Mesh(geo, mat)
+		const m = new THREE.Mesh(geo, mat)
+		m.receiveShadow = true
+		return m
 	}
 
 	function gen_floor_mesh() {
@@ -327,9 +350,12 @@ function aim() {
 
 		geo.computeFaceNormals()
 
-		const mat = new THREE.MeshStandardMaterial({ color: 0xfff2c4 })
+		//const mat = new THREE.MeshStandardMaterial({ color: 0xfff2c4 })
+		const mat = new THREE.MeshStandardMaterial({ color: 0x333333 })
 
-		return new THREE.Mesh(geo, mat)
+		const m = new THREE.Mesh(geo, mat)
+		m.receiveShadow = true
+		return m
 	}
 
 	function render_hud() {
@@ -339,9 +365,9 @@ function aim() {
 		// crosshair
 		const x = hud_canvas.width / 2 + 0.5
 		const y = hud_canvas.height / 2 + 0.5
-		const size = 10
+		const size = 6 
 		hud_context.strokeStyle = '#ffff00'
-		hud_context.lineWidth = 4
+		hud_context.lineWidth = 2
 		
 		hud_context.beginPath()
 		hud_context.moveTo(x - size, y)
@@ -391,7 +417,7 @@ function aim() {
 		if (key_states.e) {
 			camera.position.y -= d
 		}
-
+		/**
 		// restrict movement to box
 		if (camera.position.x < box.minX)
 			camera.position.x = box.minX
@@ -404,6 +430,7 @@ function aim() {
 
 		if (camera.position.z > box.maxZ)
 			camera.position.z = box.maxZ
+		*/
 	}
 
 
