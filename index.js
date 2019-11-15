@@ -35,18 +35,18 @@ function aim() {
 	let targets = []
 
 	const two_pi = Math.PI * 2
-	const wall_w = 60
+	const wall_w = 100
 	const wall_h = 60
-	const wall_d = 150
+	const wall_d = 200
 	const target_radius = 3
 	const num_targets = 3
 	const t_box = {
-		minX: -wall_w + target_radius,
-		maxX: wall_w - target_radius,
-		minY: target_radius,
-		maxY: wall_h - target_radius,
+		minX: -3/4 * wall_w,
+		maxX: 3/4 * wall_w,
+		minY: 1/4 * wall_h,
+		maxY: 3/4 * wall_h,
 		minZ: -wall_d + 20,
-		maxZ: -wall_d + 100,
+		maxZ: -wall_d + 25,
 	}
 	const box = {
 		minX: -wall_w,
@@ -54,13 +54,16 @@ function aim() {
 		minZ: -30,
 		maxZ: 10,
 	}
-	const move_speed = 0.05
-	const mouse_sens = 0.0012
 
-	const game_time = 20 * 1000
+	const move_speed = 0.05
+	const mouse_sens = 0.000554
+	const fov = 95
+
+	const game_time = 30 * 1000
 	let start_time
 	let time_left
 	let score
+	let shots_fired
 
 	start()
 
@@ -76,9 +79,8 @@ function aim() {
 		three_canvas = document.getElementById("three_canvas")
 
 		// camera
-		const fov = 90
 		const aspect = three_canvas.width / three_canvas.height
-		camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 300)
+		camera = new THREE.PerspectiveCamera(fov/aspect, aspect, 0.1, 300)
 		camera.position.y = wall_h / 2
 		camera.quaternion.setFromEuler(new THREE.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 
@@ -102,11 +104,11 @@ function aim() {
 		scene.add(ambient);
 
 		const light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 16, 0.3, 10)
-		light.target.position.set(0, 0, -50)
-		light.position.set(-100, 500, 100)
+		light.target.position.set(0, 0, -wall_d)
+		light.position.set(-100, wall_d * 4, 100)
 		light.castShadow = true
-		light.shadow.camera.near = 1
-		light.shadow.camera.far = 800 
+		light.shadow.camera.near = 500
+		light.shadow.camera.far = 1000 
 		light.shadow.mapSize.width = 4096
 		light.shadow.mapSize.height = 4096
 		scene.add(light)
@@ -126,7 +128,7 @@ function aim() {
 
 		document.addEventListener('mousemove', mouse_move)
 
-		three_canvas.addEventListener('click', (event) => {
+		three_canvas.addEventListener('mousedown', (event) => {
 			if (!has_focus && have_pointer_lock()) {
 				reset_game_vars()
 				activate_pointer_lock(three_canvas)
@@ -161,6 +163,7 @@ function aim() {
 	function reset_game_vars() {
 		start_time = Date.now()
 		score = 0
+		shots_fired = 0
 	}
 
 	function start_loop() {
@@ -207,39 +210,38 @@ function aim() {
 			z: -Math.cos(yaw) * Math.cos(pitch),
 		}
 
-		// only check collision if aiming in the right area
-		//if (-d.z * (wall_d * 1.4) > wall_d) {
-			for (let i = 0; i < targets.length; i++) {
-				const t = targets[i]
-				const q = dist_3d({
-					x1: t.x,
-					y1: t.y,
-					z1: t.z
-				}, {
-					x2: camera.position.x,
-					y2: camera.position.y,
-					z2: camera.position.z,
-				})
-				
-				// potential hit point, on same z-plane as target checked
-				const p = {
-					x: d.x * q + camera.position.x,
-					y: d.y * q + camera.position.y,
-					z: d.z * q + camera.position.z,
-				}
-				
-				// distance between potential hit point and middle of target
-				const off = dist_2d(p.x, p.y, t.x, t.y)
-
-				if (off < target_radius) {
-					scene.remove(targets[i].mesh)
-					targets.splice(i, 1)
-					spawnTarget()
-					score++
-					break
-				}
+		for (let i = 0; i < targets.length; i++) {
+			const t = targets[i]
+			const q = dist_3d({
+				x1: t.x,
+				y1: t.y,
+				z1: t.z
+			}, {
+				x2: camera.position.x,
+				y2: camera.position.y,
+				z2: camera.position.z,
+			})
+			
+			// potential hit point, on same z-plane as target checked
+			const p = {
+				x: d.x * q + camera.position.x,
+				y: d.y * q + camera.position.y,
+				z: d.z * q + camera.position.z,
 			}
-		//}
+			
+			// distance between potential hit point and middle of target
+			const off = dist_2d(p.x, p.y, t.x, t.y)
+
+			if (off < target_radius) {
+				scene.remove(targets[i].mesh)
+				targets.splice(i, 1)
+				spawnTarget()
+				score++
+				break
+			}
+		}
+
+		shots_fired++
 	}
 
 	function spawnTarget() {
@@ -380,7 +382,8 @@ function aim() {
 		hud_context.font = '30px Input'
 		hud_context.fillStyle = '#ffffff'
 		let time = (time_left / 1000).toFixed(1)
-		hud_context.fillText('Score: ' + score + ' | Time: ' + time, 10, 30)
+		let acc = parseFloat(score * 100 / shots_fired).toFixed(2)
+		hud_context.fillText('Score: ' + score + ' | Acc: ' + acc + '% | Time: ' + time, 10, 30)
 	}
 
 	function update_pos(dt) {
