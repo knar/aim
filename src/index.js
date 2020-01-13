@@ -468,6 +468,7 @@ function aim() {
 
 		const dpr = config.cm_per_rev * (config.dpi / 2.54)
 		const sens = (Math.PI*2) / dpr
+		console.log(sens)
 		aim.yaw -= dx * sens
 		aim.pitch -= dy * sens
 
