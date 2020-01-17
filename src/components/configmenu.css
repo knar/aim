@@ -1,0 +1,31 @@
+.config-menu {
+	z-index: 2;
+	position: fixed;
+	top: 10vh;
+	left: 10vw;
+	padding: 16px;
+	border-radius: 12px;
+	background-color: white;
+	box-shadow: 0 0 10px black;
+	display: flex;
+	flex-direction: column;
+}
+
+.config-entry {
+	margin: 4px;
+}
+
+h3 {
+	text-align: center;
+	margin: 4px;
+}
+label {
+	float: left;
+	text-align: right;
+	width: 74px;
+	padding-right: 6px;
+}
+
+input {
+	width: 80px;
+}

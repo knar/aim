@@ -1,10 +1,7 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react'
+import ReactDOM from 'react-dom'
+import Game from './components/Game'
 
-const title = 'Aim trainer... eventually.'
-ReactDOM.render(
-	<div>{title}</div>,
-	document.getElementById('app')
-)
+ReactDOM.render(<Game />, document.getElementById('game'))
 
 module.hot.accept()
