@@ -198,12 +198,12 @@ function loop(time) {
 	}
 
 	const dt = time - last_time
-	if (dt < (1000 / config.frame_rate_limit)) {
-		console.log(dt)
-		return
-	}
+	// if (dt < (1000 / config.frame_rate_limit)) {
+	// 	console.log(dt)
+	// 	return
+	// }
 	last_time = time
-
+	
 	update_pos(dt)
 
 	renderer.render(scene, camera)
@@ -215,7 +215,7 @@ function loop(time) {
 	frame_times.push(now)
 	fps = frame_times.length
 	
-	if (now - last_hud_render_time > 100) {
+	if (now - last_hud_render_time > 50) {
 		render_hud()
 		last_hud_render_time = now
 	}
@@ -386,27 +386,27 @@ function render_hud() {
 	hud_context.clearRect(0, 0, hud_canvas.width, hud_canvas.height)
 
 	// dot crosshair
-	const x = hud_canvas.width / 2
-	const y = hud_canvas.height / 2
-	const radius = 2.5
-	hud_context.fillStyle = '#ffff00'
-	hud_context.beginPath()
-	hud_context.arc(x, y, radius, 0, 2*Math.PI)
-	hud_context.fill()
+	// const x = hud_canvas.width / 2
+	// const y = hud_canvas.height / 2
+	// const radius = 2.5
+	// hud_context.fillStyle = '#ffff00'
+	// hud_context.beginPath()
+	// hud_context.arc(x, y, radius, 0, 2*Math.PI)
+	// hud_context.fill()
 
 	// + crosshair
-	//const x = hud_canvas.width / 2 + 0.5
-	//const y = hud_canvas.height / 2 + 0.5
-	//const size = 6 
-	//hud_context.strokeStyle = '#ffff00'
-	//hud_context.lineWidth = 2
-	//
-	//hud_context.beginPath()
-	//hud_context.moveTo(x - size, y)
-	//hud_context.lineTo(x + size, y)
-	//hud_context.moveTo(x, y - size)
-	//hud_context.lineTo(x, y + size)
-	//hud_context.stroke()
+	const x = hud_canvas.width / 2
+	const y = hud_canvas.height / 2
+	const size = 8
+	hud_context.strokeStyle = '#ffff00'
+	hud_context.lineWidth = 4
+	
+	hud_context.beginPath()
+	hud_context.moveTo(x - size, y)
+	hud_context.lineTo(x + size, y)
+	hud_context.moveTo(x, y - size)
+	hud_context.lineTo(x, y + size)
+	hud_context.stroke()
 
 	// timer and score
 	hud_context.font = '30px Monospace'
@@ -419,7 +419,6 @@ function render_hud() {
 function update_pos(dt) {
 	const d = config.move_speed * dt
 	const theta = aim.yaw % two_pi
-
 	const dsin = Math.sin(theta) * d
 	const dcos = Math.cos(theta) * d
 

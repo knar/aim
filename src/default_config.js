@@ -4,8 +4,8 @@ export const default_config = {
 	dpi: 800,
 
 	duration: 30 * 1000,
-	num_targets: 6,
-	target_radius: 3,
+	num_targets: 2,
+	target_radius: 2,
 	
 	move_speed: 0.025,
 
