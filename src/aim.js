@@ -30,15 +30,15 @@ let targets = []
 
 const two_pi = Math.PI * 2
 const wall_w = 100
-const wall_h = 60
+const wall_h = 200
 const wall_d = 200
 const t_box = {
-	minX: -3/5 * wall_w,
-	maxX: 3/5 * wall_w,
-	minY: 1/5 * wall_h,
-	maxY: 4/5 * wall_h,
+	minX: -19/20 * wall_w,
+	maxX: 19/20 * wall_w,
+	minY: 1/20 * wall_h,
+	maxY: 19/20 * wall_h,
 	minZ: -wall_d + 20,
-	maxZ: -wall_d + 25,
+	maxZ: -wall_d + 20,
 }
 const box = {
 	minX: -wall_w,
@@ -97,11 +97,11 @@ function canvas_setup() {
 	renderer.gammaOutput = true;
 	renderer.gammaFactor = 2;
 
-	renderer.shadowMap.enabled = true
+	renderer.shadowMap.enabled = false
 
 	// scene setup
 	scene = new three.Scene()
-	scene.background = new three.Color(0x77aaff)
+	scene.background = new three.Color(0x0f1417)
 
 	scene.add(gen_floor_mesh())
 	scene.add(gen_wall_mesh())
@@ -302,20 +302,21 @@ function dist_3d({ x1, y1, z1 }, { x2, y2, z2 }) {
 }
 
 function gen_target_mesh({ x, y, z }) {
-	let geo = new three.CylinderGeometry(config.target_radius, config.target_radius, 1, 64)
-	let mat = new three.MeshStandardMaterial({ color: 0xdd2222, metalness: 0.5 })
-	let geo_dot = new three.CylinderGeometry(config.target_radius * 0.3, config.target_radius * 0.6, 1.5, 32)
-		.translate(0, 0.26, 0)
-	let mat_dot = new three.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
+	let geo = new three.SphereGeometry(config.target_radius, 16, 16)
+	let mat = new three.MeshStandardMaterial({ color: 0xb211d3, metalness: 0.05 })
+	//let geo_dot = new three.CylinderGeometry(config.target_radius * 0.3, config.target_radius * 0.6, 1.5, 32)
+	//	.translate(0, 0.26, 0)
+	//let mat_dot = new three.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
 
-	let m = new three.Group()
-		.add(new three.Mesh(geo, mat))
-		.add(new three.Mesh(geo_dot, mat_dot))
-		.rotateX(Math.PI / 2)
+	//let m = new three.Group()
+	//	.add(new three.Mesh(geo, mat))
+	//	.add(new three.Mesh(geo_dot, mat_dot))
+	//	.rotateX(Math.PI / 2)
+	let m = new three.Mesh(geo, mat)
 	m.position.x = x
 	m.position.y = y
 	m.position.z = z
-	m.children.forEach(c => c.castShadow = true)
+	//m.children.forEach(c => c.castShadow = true)
 	
 	return m
 }
@@ -374,7 +375,7 @@ function gen_floor_mesh() {
 
 	geo.computeFaceNormals()
 
-	const mat = new three.MeshStandardMaterial({ color: 0x202828 })
+	const mat = new three.MeshStandardMaterial({ color: 0x121a22 })
 
 	const m = new three.Mesh(geo, mat)
 	m.receiveShadow = true
@@ -397,9 +398,9 @@ function render_hud() {
 	// + crosshair
 	const x = hud_canvas.width / 2
 	const y = hud_canvas.height / 2
-	const size = 8
+	const size = 6
 	hud_context.strokeStyle = '#ffff00'
-	hud_context.lineWidth = 4
+	hud_context.lineWidth = 2
 	
 	hud_context.beginPath()
 	hud_context.moveTo(x - size, y)
