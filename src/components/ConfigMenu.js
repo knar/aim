@@ -38,10 +38,29 @@ function ConfigMenu({config, setConfig}) {
 		setConfig({...config, duration: event.target.value})
 	}
 
+	// const menuItems = [
+	// 	{ title: 'CM/Rev', configValue: 'cm_per_rev', },
+	// 	{ title: 'CM/Rev', configValue: 'cm_per_rev', },
+	// 	{ title: 'CM/Rev', configValue: 'cm_per_rev', },
+	// ]
+
 	const renderConfigMenu = () => {
 		return (
 			<div className="config-menu">
 				<h3>Feel</h3>
+
+				{/* {menuItems.map(({title, configValue}) => (
+					<div className="config-entry">
+						<label>{title}</label>
+						<input
+							type="number"
+							value={config[configValue]}
+							onChange={ev => setConfig({...config, [configValue]: ev.target.value})}
+							step="0.01"
+						/>
+					</div>
+				))} */}
+
 				<div className="config-entry">
 					<label>CM/Rev:</label>
 					<input
@@ -97,7 +116,6 @@ function ConfigMenu({config, setConfig}) {
 						step="1"
 					/>
 				</div>
-				<h3>yayya</h3>
 			</div>
 		)
 	}

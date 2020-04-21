@@ -7,6 +7,7 @@ let three_canvas
 let renderer
 let scene
 let camera
+let raycaster
 let has_focus
 let hud_canvas
 let hud_context
@@ -33,12 +34,12 @@ const wall_w = 100
 const wall_h = 200
 const wall_d = 200
 const t_box = {
-	minX: -19/20 * wall_w,
-	maxX: 19/20 * wall_w,
-	minY: 1/20 * wall_h,
-	maxY: 19/20 * wall_h,
-	minZ: -wall_d + 20,
-	maxZ: -wall_d + 20,
+	minX: -wall_w + 10,
+	maxX: wall_w - 10,
+	minY: 10,
+	maxY: wall_h - 10,
+	minZ: -wall_d + 10,
+	maxZ: -wall_d + 10,
 }
 const box = {
 	minX: -wall_w,
@@ -47,9 +48,11 @@ const box = {
 	maxZ: 10,
 }
 
+let last_target_pos = { x: 0, y: 1/2 * wall_h, z: (t_box.minZ + t_box.maxZ) / 2 }
+
 let start_time
 let time_left
-let score
+let hits
 let shots_fired
 
 let frame_times = []
@@ -85,9 +88,10 @@ function canvas_setup() {
 
 	// camera
 	const aspect = three_canvas.width / three_canvas.height
-	camera = new three.PerspectiveCamera(horzToVertFov(config.fov, aspect), aspect, 0.1, 300)
+	camera = new three.PerspectiveCamera(horzToVertFov(config.fov, aspect), aspect, 0.1, 3000)
 
 	camera.position.y = wall_h / 2
+	camera.position.z = -7
 	camera.quaternion.setFromEuler(new three.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 
 	// renderer
@@ -101,20 +105,22 @@ function canvas_setup() {
 
 	// scene setup
 	scene = new three.Scene()
-	scene.background = new three.Color(0x0f1417)
+	//scene.background = new three.Color(0x1c2227)
+	scene.background = new three.Color(0x000)
 
 	scene.add(gen_floor_mesh())
 	scene.add(gen_wall_mesh())
 
-	const ambient = new three.AmbientLight(0x444444, 1.6);
+	const ambient = new three.AmbientLight(0xffffff, 0.2);
 	scene.add(ambient);
 
-	const light = new three.SpotLight( 0xffffff, 1, 0, Math.PI / 16, 0.3, 10)
-	light.target.position.set(0, 0, -wall_d)
-	light.position.set(-100, wall_d * 4, 100)
+	const light = new three.SpotLight( 0xffffff, 1.0, 0, Math.PI / 8, 0.5, 2)
+	light.target.position.set(0, wall_h / 2, -wall_d)
+	
+	light.position.set(-3/4 * wall_w , wall_h * 4, wall_d * 2)
 	light.castShadow = true
 	light.shadow.camera.near = 500
-	light.shadow.camera.far = 1000 
+	light.shadow.camera.far = 1000
 	light.shadow.mapSize.width = 4096
 	light.shadow.mapSize.height = 4096
 	scene.add(light)
@@ -127,7 +133,10 @@ function canvas_setup() {
 	// add targets
 	targets = []
 	for (let i = 0; i < config.num_targets; i++)
-		spawnTarget()
+		spawn_target()
+
+	// raycaster
+	raycaster = new three.Raycaster()
 }
 
 function set_event_listeners() {
@@ -169,7 +178,7 @@ function resize() {
 
 function reset_game_vars() {
 	start_time = Date.now()
-	score = 0
+	hits = 0
 	shots_fired = 0
 }
 
@@ -190,10 +199,11 @@ function loop(time) {
 	rafID = null
 	start_loop()
 	
-	time_left = config.duration - (Date.now() - start_time)
+	time_left = config.duration * 1000 - (Date.now() - start_time)
 	if (time_left < 0) {
 		stop_loop()
-		console.log('Score: ' + score)
+		render_hud()
+		document.exitPointerLock();
 		return
 	}
 
@@ -206,6 +216,8 @@ function loop(time) {
 	
 	update_pos(dt)
 
+	raycaster.setFromCamera(new three.Vector2(0, 0), camera)
+
 	renderer.render(scene, camera)
 
 	const now = ~~(performance.now())
@@ -215,75 +227,87 @@ function loop(time) {
 	frame_times.push(now)
 	fps = frame_times.length
 	
-	if (now - last_hud_render_time > 50) {
+	if (now - last_hud_render_time > 100) {
 		render_hud()
 		last_hud_render_time = now
 	}
 }
 
 function shoot() {
-	const yaw = aim.yaw % two_pi
-	const pitch = aim.pitch % two_pi
+	const intersects = raycaster.intersectObjects(targets.map(({ mesh }) => mesh))
+	shots_fired++
 
-	// unit vector
-	const d = {
-		x: -Math.sin(yaw) * Math.cos(pitch),
-		y: Math.sin(pitch),
-		z: -Math.cos(yaw) * Math.cos(pitch),
-	}
-
+	if (!intersects.length)
+		return
+	
 	for (let i = 0; i < targets.length; i++) {
-		const t = targets[i]
-		const q = dist_3d({
-			x1: t.x,
-			y1: t.y,
-			z1: t.z
-		}, {
-			x2: camera.position.x,
-			y2: camera.position.y,
-			z2: camera.position.z,
-		})
-		
-		// potential hit point, on same z-plane as target checked
-		const p = {
-			x: d.x * q + camera.position.x,
-			y: d.y * q + camera.position.y,
-			z: d.z * q + camera.position.z,
-		}
-		
-		// distance between potential hit point and middle of target
-		const off = dist_2d(p.x, p.y, t.x, t.y)
-
-		if (off < config.target_radius) {
+		if (targets[i].mesh == intersects[0].object) {
 			scene.remove(targets[i].mesh)
 			targets.splice(i, 1)
-			spawnTarget()
-			score++
+			spawn_target()
+			hits++
 			break
 		}
 	}
-
-	shots_fired++
 }
 
-function spawnTarget() {
-	if (targets.length < config.num_targets) {
-		const x = rand(t_box.minX, t_box.maxX)
-		const y = rand(t_box.minY, t_box.maxY)
-		const z = rand(t_box.minZ, t_box.maxZ)
-		
-		const mesh = gen_target_mesh({ x, y, z })
-		const t = { x, y, z, mesh }
+function spawn_target() {
+	if (targets.length >= config.num_targets)
+		return
 
-		targets.push(t)
-		scene.add(t.mesh)
-
-		targets.sort((a, b) => b.z - a.z)
+	let x, y, z
+	switch (config.spawn_type) {
+		case 'relative_xy_radius':
+			do {
+				const dist = rand(config.relative_min_distance, config.relative_max_distance)
+				const theta = rand(0, two_pi)
+				x = last_target_pos.x + dist * Math.cos(theta)
+				y = last_target_pos.y + dist * Math.sin(theta)
+				z = last_target_pos.z
+			}
+			while (!within_box(x, y, z, t_box.minX, t_box.minY, t_box.minZ, t_box.maxX, t_box.maxY, t_box.maxZ) || overlaps_targets(x, y, z))
+			break
+		default:
+			do {
+				x = rand(t_box.minX, t_box.maxX)
+				y = rand(t_box.minY, t_box.maxY)
+				z = rand(t_box.minZ, t_box.maxZ)
+			}
+			while (overlaps_targets(x, y, z))
 	}
+	const mesh = gen_target_mesh({ x, y, z })
+	const t = { x, y, z, mesh }
+	last_target_pos = { x: x, y: y, z: z }
+	targets.push(t)
+	scene.add(t.mesh)
 }
 
 function rand(min, max) {
 	return Math.random() * (max - min) + min
+}
+
+function overlaps_targets(x, y, z) {
+	for (const t of targets) {
+		if (dist_3d(x, y, z, t.x, t.y, t.z) < 2 * config.target_radius)
+			return true
+	}
+	return false
+}
+
+// whether or not the point {x1, y1, z1} is within the box
+// formed by corners {x2, y2, z2} and {x3, y3, z3}
+// edge inclusive
+function within_box(x1, y1, z1, x2, y2, z2, x3, y3, z3) {
+	if (x2 > x3)
+		[x2, x3] = [x3, x2]
+	if (y2 > y3)
+		[y2, y3] = [y3, y2]
+	if (z2 > z3)
+		[z2, z3] = [z3, z2]
+	// TODO: swapperoo
+	if (x1 < x2 || y1 < y2 || z1 < z2 || x1 > x3 || y1 > y3 || z1 > z3)
+		return false
+	return true
 }
 
 function dist_2d(x1, y1, x2, y2) {
@@ -293,7 +317,7 @@ function dist_2d(x1, y1, x2, y2) {
 	return Math.sqrt(dx*dx + dy+dy)
 }
 
-function dist_3d({ x1, y1, z1 }, { x2, y2, z2 }) {
+function dist_3d(x1, y1, z1, x2, y2, z2) {
 	const dx = Math.abs(x1 - x2)
 	const dy = Math.abs(y1 - y2)
 	const dz = Math.abs(z1 - z2)
@@ -302,8 +326,8 @@ function dist_3d({ x1, y1, z1 }, { x2, y2, z2 }) {
 }
 
 function gen_target_mesh({ x, y, z }) {
-	let geo = new three.SphereGeometry(config.target_radius, 16, 16)
-	let mat = new three.MeshStandardMaterial({ color: 0xb211d3, metalness: 0.05 })
+	let geo = new three.SphereGeometry(config.target_radius, 32, 32)
+	let mat = new three.MeshStandardMaterial({ color: 0x0c6ae4, roughness: 0.8, metalness: 0.2 })
 	//let geo_dot = new three.CylinderGeometry(config.target_radius * 0.3, config.target_radius * 0.6, 1.5, 32)
 	//	.translate(0, 0.26, 0)
 	//let mat_dot = new three.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
@@ -316,6 +340,7 @@ function gen_target_mesh({ x, y, z }) {
 	m.position.x = x
 	m.position.y = y
 	m.position.z = z
+	m.castShadow = true
 	//m.children.forEach(c => c.castShadow = true)
 	
 	return m
@@ -413,8 +438,10 @@ function render_hud() {
 	hud_context.font = '30px Monospace'
 	hud_context.fillStyle = '#ffffff'
 	let time = (time_left / 1000).toFixed(1)
-	let acc = parseFloat(score * 100 / shots_fired).toFixed(2)
-	hud_context.fillText('Score: ' + score + ' | Acc: ' + acc + '% | Time: ' + time + ' | FPS: ' + fps, 10, 30)
+	let acc = parseFloat(hits * 100 / shots_fired).toFixed(1)
+	let hits_per_second = (hits / (config.duration - time_left / 1000)).toFixed(2)
+	let effective_score = (hits * acc / 100).toFixed(1)
+	hud_context.fillText('Hits: ' + hits + ' | H/s: ' + hits_per_second + ' | Acc: ' + acc + '% | Eff: ' + effective_score + ' | Time: ' + time + ' | FPS: ' + fps, 10, 30)
 }
 
 function update_pos(dt) {
