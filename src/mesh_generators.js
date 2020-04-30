@@ -1,20 +1,12 @@
 function gen_target_mesh({ x, y, z }, config) {
 	let geo = new three.SphereGeometry(config.target_radius, 32, 32)
-	let mat = new three.MeshStandardMaterial({ color: 0x0c6ae4, roughness: 0.8, metalness: 0.2 })
-	//let geo_dot = new three.CylinderGeometry(config.target_radius * 0.3, config.target_radius * 0.6, 1.5, 32)
-	//	.translate(0, 0.26, 0)
-	//let mat_dot = new three.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
-
-	//let m = new three.Group()
-	//	.add(new three.Mesh(geo, mat))
-	//	.add(new three.Mesh(geo_dot, mat_dot))
-	//	.rotateX(Math.PI / 2)
+	let mat = new three.MeshStandardMaterial({
+		color: 0x0c6ae4, roughness: 0.8, metalness: 0.2 })
 	let m = new three.Mesh(geo, mat)
 	m.position.x = x
 	m.position.y = y
 	m.position.z = z
 	m.castShadow = true
-	//m.children.forEach(c => c.castShadow = true)
 	
 	return m
 }

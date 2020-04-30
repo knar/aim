@@ -1,6 +1,7 @@
 import * as three from './three.module.js'
 import { have_pointer_lock, activate_pointer_lock, is_pointer_locked } from './pointer_lock.js'
 import { gen_target_mesh, gen_wall_mesh, gen_floor_mesh } from './mesh_generators.js'
+import { rand, dist_3d, horzToVertFov } from './utils.js'
 import { default_config } from './default_config.js'
 
 let rafID
@@ -30,7 +31,6 @@ const key_states = {
 
 const targets = []
 
-const two_pi = Math.PI * 2
 const wall_w = 100
 const wall_h = 200
 const wall_d = 200
@@ -49,7 +49,8 @@ const box = {
 	maxZ: 10,
 }
 
-const last_target_pos = { x: 0, y: 1/2 * wall_h, z: (t_box.minZ + t_box.maxZ) / 2 }
+const last_target_pos = { x: 0, y: 1/2 * wall_h,
+	z: (t_box.minZ + t_box.maxZ) / 2 }
 
 let start_time
 let time_left
@@ -62,6 +63,7 @@ let last_hud_render_time = 0
 
 let config = default_config
 
+// public
 export function init_aim() {
 	canvas_setup()
 	set_event_listeners()
@@ -82,12 +84,12 @@ export function update_config(new_config) {
 	config = new_config	
 }
 
+// private
 function canvas_setup() {
 	three_canvas = document.getElementById("three_canvas")
 	three_canvas.width = window.innerWidth
 	three_canvas.height = window.innerHeight
 
-	// camera
 	const aspect = three_canvas.width / three_canvas.height
 	camera = new three.PerspectiveCamera(horzToVertFov(config.fov, aspect), aspect, 0.1, 3000)
 
@@ -95,7 +97,6 @@ function canvas_setup() {
 	camera.position.z = -7
 	camera.quaternion.setFromEuler(new three.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 
-	// renderer
 	renderer = new three.WebGLRenderer({ canvas: three_canvas, antialias: true })
 	renderer.setSize(three_canvas.width, three_canvas.height)
 
@@ -104,9 +105,7 @@ function canvas_setup() {
 
 	renderer.shadowMap.enabled = false
 
-	// scene setup
 	scene = new three.Scene()
-	//scene.background = new three.Color(0x1c2227)
 	scene.background = new three.Color(0x000)
 
 	scene.add(gen_floor_mesh({wall_w, wall_h, wall_d}))
@@ -127,16 +126,13 @@ function canvas_setup() {
 	scene.add(light)
 	scene.add(light.target)
 
-	// hud stuff
 	hud_canvas = document.getElementById("hud_canvas")
 	hud_context = hud_canvas.getContext("2d")
 
-	// add targets
 	targets = []
 	for (let i = 0; i < config.num_targets; i++)
 		spawn_target()
 
-	// raycaster
 	raycaster = new three.Raycaster()
 }
 
@@ -261,7 +257,7 @@ function spawn_target() {
 		case 'relative_xy_radius':
 			do {
 				const dist = rand(config.relative_min_distance, config.relative_max_distance)
-				const theta = rand(0, two_pi)
+				const theta = rand(0, 2 * Math.PI)
 				x = last_target_pos.x + dist * Math.cos(theta)
 				y = last_target_pos.y + dist * Math.sin(theta)
 				z = last_target_pos.z
@@ -363,7 +359,7 @@ function mouse_move(event) {
 
 function update_pos(dt) {
 	const d = config.move_speed * dt
-	const theta = aim.yaw % two_pi
+	const theta = aim.yaw % (2 * Math.PI)
 	const dsin = Math.sin(theta) * d
 	const dcos = Math.cos(theta) * d
 
@@ -454,10 +450,4 @@ function key_up_event(event) {
 			key_states.e = false
 			break
 	}
-}
-
-// horzToVertFov(95, 16:9) -> 63.09
-function horzToVertFov(fov, aspect) {
-	const rad = fov * Math.PI/180
-	return Math.atan(Math.tan(rad/2) / aspect) / Math.PI * 360
 }

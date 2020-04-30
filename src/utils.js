@@ -1,4 +1,3 @@
-
 function rand(min, max) {
 	return Math.random() * (max - min) + min
 }
@@ -17,3 +16,11 @@ function dist_3d(x1, y1, z1, x2, y2, z2) {
 
 	return Math.sqrt(dx*dx + dy*dy + dz*dz)
 }
+
+// horzToVertFov(95, 16:9) -> 63.09
+function horzToVertFov(fov, aspect) {
+	const rad = fov * Math.PI/180
+	return Math.atan(Math.tan(rad/2) / aspect) / Math.PI * 360
+}
+
+export { rand, dist_2d, dist_3d, horzToVertFov }
