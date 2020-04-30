@@ -1,5 +1,6 @@
 import * as three from './three.module.js'
 import { have_pointer_lock, activate_pointer_lock, is_pointer_locked } from './pointer_lock.js'
+import { gen_target_mesh, gen_wall_mesh, gen_floor_mesh } from './mesh_generators.js'
 import { default_config } from './default_config.js'
 
 let rafID
@@ -13,12 +14,12 @@ let hud_canvas
 let hud_context
 let last_time
 
-let aim = {
+const aim = {
 	yaw: 0,
 	pitch: 0,
 }
 
-let key_states = {
+const key_states = {
 	w: false,
 	a: false,
 	s: false,
@@ -27,7 +28,7 @@ let key_states = {
 	e: false,
 }
 
-let targets = []
+const targets = []
 
 const two_pi = Math.PI * 2
 const wall_w = 100
@@ -48,7 +49,7 @@ const box = {
 	maxZ: 10,
 }
 
-let last_target_pos = { x: 0, y: 1/2 * wall_h, z: (t_box.minZ + t_box.maxZ) / 2 }
+const last_target_pos = { x: 0, y: 1/2 * wall_h, z: (t_box.minZ + t_box.maxZ) / 2 }
 
 let start_time
 let time_left
@@ -108,8 +109,8 @@ function canvas_setup() {
 	//scene.background = new three.Color(0x1c2227)
 	scene.background = new three.Color(0x000)
 
-	scene.add(gen_floor_mesh())
-	scene.add(gen_wall_mesh())
+	scene.add(gen_floor_mesh({wall_w, wall_h, wall_d}))
+	scene.add(gen_wall_mesh({wall_w, wall_h, wall_d}))
 
 	const ambient = new three.AmbientLight(0xffffff, 0.2);
 	scene.add(ambient);
@@ -282,10 +283,6 @@ function spawn_target() {
 	scene.add(t.mesh)
 }
 
-function rand(min, max) {
-	return Math.random() * (max - min) + min
-}
-
 function overlaps_targets(x, y, z) {
 	for (const t of targets) {
 		if (dist_3d(x, y, z, t.x, t.y, t.z) < 2 * config.target_radius)
@@ -308,103 +305,6 @@ function within_box(x1, y1, z1, x2, y2, z2, x3, y3, z3) {
 	if (x1 < x2 || y1 < y2 || z1 < z2 || x1 > x3 || y1 > y3 || z1 > z3)
 		return false
 	return true
-}
-
-function dist_2d(x1, y1, x2, y2) {
-	const dx = Math.abs(x1 - x2)
-	const dy = Math.abs(y1 - y2)
-
-	return Math.sqrt(dx*dx + dy+dy)
-}
-
-function dist_3d(x1, y1, z1, x2, y2, z2) {
-	const dx = Math.abs(x1 - x2)
-	const dy = Math.abs(y1 - y2)
-	const dz = Math.abs(z1 - z2)
-
-	return Math.sqrt(dx*dx + dy*dy + dz*dz)
-}
-
-function gen_target_mesh({ x, y, z }) {
-	let geo = new three.SphereGeometry(config.target_radius, 32, 32)
-	let mat = new three.MeshStandardMaterial({ color: 0x0c6ae4, roughness: 0.8, metalness: 0.2 })
-	//let geo_dot = new three.CylinderGeometry(config.target_radius * 0.3, config.target_radius * 0.6, 1.5, 32)
-	//	.translate(0, 0.26, 0)
-	//let mat_dot = new three.MeshStandardMaterial({ color: 0xffffff, metalness: 0 })
-
-	//let m = new three.Group()
-	//	.add(new three.Mesh(geo, mat))
-	//	.add(new three.Mesh(geo_dot, mat_dot))
-	//	.rotateX(Math.PI / 2)
-	let m = new three.Mesh(geo, mat)
-	m.position.x = x
-	m.position.y = y
-	m.position.z = z
-	m.castShadow = true
-	//m.children.forEach(c => c.castShadow = true)
-	
-	return m
-}
-
-function gen_wall_mesh() {
-	let geo = new three.Geometry()
-
-	geo.vertices.push(
-		new three.Vector3(-wall_w, 0, -wall_d),
-		new three.Vector3(-wall_w, wall_h, -wall_d),
-		new three.Vector3(-wall_w, wall_h, 0),
-		new three.Vector3(-wall_w, 0, 0),
-		new three.Vector3(wall_w, 0, -wall_d),
-		new three.Vector3(wall_w, wall_h, -wall_d),
-		new three.Vector3(wall_w, wall_h, 0),
-		new three.Vector3(wall_w, 0, 0),
-	)
-
-	geo.faces.push(
-		// left wall
-		new three.Face3(0, 1, 2),
-		new three.Face3(2, 3, 0),
-
-		// right wall
-		new three.Face3(7, 6, 5),
-		new three.Face3(5, 4, 7),
-		
-		// back wall
-		new three.Face3(0, 4, 5),
-		new three.Face3(5, 1, 0),
-	)
-
-	geo.computeFaceNormals()
-
-	const mat = new three.MeshPhongMaterial({ color: 0x101820 })
-
-	const m = new three.Mesh(geo, mat)
-	m.receiveShadow = true
-	return m
-}
-
-function gen_floor_mesh() {
-	let geo = new three.Geometry()
-
-	geo.vertices.push(
-		new three.Vector3(-wall_w, 0, -wall_d),
-		new three.Vector3(-wall_w, 0, 0),
-		new three.Vector3(wall_w, 0, -wall_d),
-		new three.Vector3(wall_w, 0, 0),
-	)
-
-	geo.faces.push(
-		new three.Face3(0, 1, 2),
-		new three.Face3(2, 1, 3),
-	)
-
-	geo.computeFaceNormals()
-
-	const mat = new three.MeshStandardMaterial({ color: 0x121a22 })
-
-	const m = new three.Mesh(geo, mat)
-	m.receiveShadow = true
-	return m
 }
 
 function render_hud() {
@@ -442,6 +342,23 @@ function render_hud() {
 	let hits_per_second = (hits / (config.duration - time_left / 1000)).toFixed(2)
 	let effective_score = (hits * acc / 100).toFixed(1)
 	hud_context.fillText('Hits: ' + hits + ' | H/s: ' + hits_per_second + ' | Acc: ' + acc + '% | Eff: ' + effective_score + ' | Time: ' + time + ' | FPS: ' + fps, 10, 30)
+}
+
+function mouse_move(event) {
+	if (!has_focus)
+		return
+
+	const dx = event.movementX || event.mozMovementX ||
+		event.webkitMovementX || 0
+	const dy = event.movementY || event.mozMovementY ||
+		event.webkitMovementY || 0
+
+	const dpr = config.cm_per_rev * (config.dpi / 2.54)
+	const sens = (Math.PI*2) / dpr
+	aim.yaw -= dx * sens
+	aim.pitch -= dy * sens
+
+	camera.quaternion.setFromEuler(new three.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 }
 
 function update_pos(dt) {
@@ -491,24 +408,6 @@ function update_pos(dt) {
 	if (camera.position.z > box.maxZ)
 		camera.position.z = box.maxZ
 	*/
-}
-
-
-function mouse_move(event) {
-	if (!has_focus)
-		return
-
-	const dx = event.movementX || event.mozMovementX ||
-		event.webkitMovementX || 0
-	const dy = event.movementY || event.mozMovementY ||
-		event.webkitMovementY || 0
-
-	const dpr = config.cm_per_rev * (config.dpi / 2.54)
-	const sens = (Math.PI*2) / dpr
-	aim.yaw -= dx * sens
-	aim.pitch -= dy * sens
-
-	camera.quaternion.setFromEuler(new three.Euler(aim.pitch, aim.yaw, 0, 'YXZ'))
 }
 
 function key_down_event(event) {
