@@ -3,9 +3,9 @@ export const default_config = {
 	cm_per_rev: 30.0,
 	dpi: 800,
 
-	duration: 15,
+	duration: 60,
 	num_targets: 6,
-	target_radius: 8,
+	target_radius: 1.5,
 
 	//spawn_type: 'relative_xy_radius',
 	spawn_type: '',

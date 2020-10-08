@@ -503,6 +503,9 @@ function mouse_move(event) {
 	const dy = event.movementY || event.mozMovementY ||
 		event.webkitMovementY || 0
 
+	if (Math.abs(dx) > 150 || Math.abs(dy) > 150)
+		console.log(dx, dy)
+
 	const dpr = config.cm_per_rev * (config.dpi / 2.54)
 	const sens = (Math.PI*2) / dpr
 	aim.yaw -= dx * sens
