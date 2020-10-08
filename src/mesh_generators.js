@@ -1,3 +1,5 @@
+import * as three from 'three'
+
 function gen_target_mesh({ x, y, z }, config) {
 	let geo = new three.SphereGeometry(config.target_radius, 32, 32)
 	let mat = new three.MeshStandardMaterial({

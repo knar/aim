@@ -1,19 +1,9 @@
-import * as three from './three.module.js'
+import * as three from 'three'
 import { have_pointer_lock, activate_pointer_lock, is_pointer_locked } from './pointer_lock.js'
 import { gen_target_mesh, gen_wall_mesh, gen_floor_mesh } from './mesh_generators.js'
 import { rand, dist_3d, horzToVertFov } from './utils.js'
 import { default_config } from './default_config.js'
-
-let rafID
-let three_canvas
-let renderer
-let scene
-let camera
-let raycaster
-let has_focus
-let hud_canvas
-let hud_context
-let last_time
+import { beep } from './sound.js'
 
 const aim = {
 	yaw: 0,
@@ -28,8 +18,6 @@ const key_states = {
 	q: false,
 	e: false,
 }
-
-const targets = []
 
 const wall_w = 100
 const wall_h = 200
@@ -49,21 +37,27 @@ const box = {
 	maxZ: 10,
 }
 
-const last_target_pos = { x: 0, y: 1/2 * wall_h,
-	z: (t_box.minZ + t_box.maxZ) / 2 }
-
+let rafID
+let three_canvas
+let renderer
+let scene
+let camera
+let raycaster
+let has_focus
+let hud_canvas
+let hud_context
+let last_time
+let targets = []
+let last_target_pos = { x: 0, y: 1/2 * wall_h, z: (t_box.minZ + t_box.maxZ) / 2 }
 let start_time
 let time_left
 let hits
 let shots_fired
-
 let frame_times = []
 let fps = 0
 let last_hud_render_time = 0
-
 let config = default_config
 
-// public
 export function init_aim() {
 	canvas_setup()
 	set_event_listeners()
@@ -84,7 +78,6 @@ export function update_config(new_config) {
 	config = new_config	
 }
 
-// private
 function canvas_setup() {
 	three_canvas = document.getElementById("three_canvas")
 	three_canvas.width = window.innerWidth
@@ -100,7 +93,6 @@ function canvas_setup() {
 	renderer = new three.WebGLRenderer({ canvas: three_canvas, antialias: true })
 	renderer.setSize(three_canvas.width, three_canvas.height)
 
-	renderer.gammaOutput = true;
 	renderer.gammaFactor = 2;
 
 	renderer.shadowMap.enabled = false
@@ -241,6 +233,9 @@ function shoot() {
 		if (targets[i].mesh == intersects[0].object) {
 			scene.remove(targets[i].mesh)
 			targets.splice(i, 1)
+
+			beep()
+
 			spawn_target()
 			hits++
 			break
@@ -272,7 +267,7 @@ function spawn_target() {
 			}
 			while (overlaps_targets(x, y, z))
 	}
-	const mesh = gen_target_mesh({ x, y, z })
+	const mesh = gen_target_mesh({ x, y, z }, config)
 	const t = { x, y, z, mesh }
 	last_target_pos = { x: x, y: y, z: z }
 	targets.push(t)
